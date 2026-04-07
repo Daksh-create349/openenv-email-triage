@@ -1,0 +1,90 @@
+name: email-triage-env
+description: >
+  A real-world customer support email triage environment. An AI agent
+  must classify incoming customer emails by category (billing, technical,
+  spam, general), assign the correct priority (low, medium, high, critical),
+  and generate a professional response. Three difficulty tiers test
+  increasingly complex, ambiguous, and high-stakes email scenarios.
+version: "1.0.0"
+author: daksh-srivastava
+tags: [openenv, email, triage, customer-support, nlp]
+
+entrypoint: app.env:EmailTriageEnv
+
+observation_model: app.models:Observation
+action_model: app.models:Action
+reward_model: app.models:Reward
+state_model: app.models:State
+
+tasks:
+  - id: easy
+    name: Basic Email Triage
+    description: >
+      10 unambiguous emails. Category and priority clearly telegraphed.
+      Tests fundamental classification ability.
+    difficulty: easy
+    num_emails: 10
+    max_score: 10.0
+
+  - id: medium
+    name: Intermediate Email Triage
+    description: >
+      10 emails requiring reading comprehension and business context.
+      Priority judgment is nuanced — some routine-looking emails are actually urgent.
+    difficulty: medium
+    num_emails: 10
+    max_score: 10.0
+
+  - id: hard
+    name: Advanced Email Triage
+    description: >
+      10 complex, high-stakes, ambiguous emails: legal threats, GDPR requests,
+      data loss, security breaches, multi-issue complaints. Tests edge-case handling
+      and appropriate escalation. Frontier models typically score below 0.7 here.
+    difficulty: hard
+    num_emails: 10
+    max_score: 10.0
+
+reward:
+  type: continuous
+  range: [0.0, 1.0]
+  components:
+    - name: category_accuracy
+      weight: 0.35
+      description: Exact match of predicted vs expected category
+    - name: priority_accuracy
+      weight: 0.30
+      description: Exact match (full credit) or 1-level-off (partial credit)
+    - name: response_quality
+      weight: 0.35
+      description: Keyword coverage of expected response terms
+
+action_space:
+  category:
+    type: string
+    options: [billing, technical, spam, general]
+  priority:
+    type: string
+    options: [low, medium, high, critical]
+  response:
+    type: string
+    description: Professional reply to the customer (min 30 chars)
+
+observation_space:
+  current_email:
+    id: int
+    subject: string
+    sender: string
+    body: string
+    timestamp: string (ISO 8601)
+  task_id: string
+  step: int
+  total_steps: int
+  history: list of {email_id, score}
+
+http_endpoints:
+  - POST /reset   — start new episode, returns Observation
+  - POST /step    — submit Action, returns {observation, reward, done, info}
+  - GET  /state   — returns full State
+  - GET  /tasks   — list available tasks
+  - GET  /health  — health check
