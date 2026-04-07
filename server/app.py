@@ -76,8 +76,17 @@ def step(action: Action):
 
 
 @app.get("/state", response_model=State)
-def state():
-    global _env
-    if _env is None:
-        raise HTTPException(status_code=400, detail="Call /reset first.")
+def get_state():
+    if not _env:
+        raise HTTPException(status_code=400, detail="Environment not initialized. Call /reset first.")
     return _env.state()
+
+
+def main():
+    """Main entry point for the validator / multi-mode deployment."""
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=7860)
+
+
+if __name__ == "__main__":
+    main()
