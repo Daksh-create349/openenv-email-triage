@@ -1,4 +1,16 @@
-# 📬 Email Triage OpenEnv (Enterprise Edition)
+---
+title: My OpenEnv Email Triage
+emoji: 📬
+colorFrom: indigo
+colorTo: red
+sdk: docker
+pinned: false
+license: mit
+tags:
+- openenv
+---
+
+
 
 ### 🧐 What is this? (In Simple Terms)
 Imagine a **Flight Simulator for Customer Support Agents**. 
