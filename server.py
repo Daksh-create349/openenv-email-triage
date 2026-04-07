@@ -4,6 +4,7 @@ Endpoints: POST /reset, POST /step, GET /state, GET /tasks, GET /health
 """
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from fastapi.responses import RedirectResponse
 from app.env import EmailTriageEnv
 from app.models import Action, Observation, Reward, State
 from app.tasks import TASKS
@@ -16,6 +17,12 @@ app = FastAPI(
 
 # One env instance per session (single-user; extend with session IDs if needed)
 _env: EmailTriageEnv | None = None
+
+
+@app.get("/", include_in_schema=False)
+def root():
+    """Redirect to Swagger UI for a better user experience."""
+    return RedirectResponse(url="/docs")
 
 
 class ResetRequest(BaseModel):
