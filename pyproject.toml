@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openenv-email-triage"
+version = "1.0.0"
+description = "Enterprise-grade OpenEnv Email Triage environment with SLA and Sentiment awareness."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    { name = "Daksh Srivastava" }
+]
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "pydantic",
+    "openai",
+    "python-dotenv",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "black"]
+
+[tool.setuptools]
+packages = ["app"]
