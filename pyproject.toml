@@ -17,10 +17,11 @@ dependencies = [
     "pydantic",
     "openai",
     "python-dotenv",
+    "openenv-core>=0.2.0",
 ]
 
-[project.optional-dependencies]
-dev = ["pytest", "black"]
+[project.scripts]
+server = "server.app:app"
 
 [tool.setuptools]
-packages = ["app"]
+packages = ["app", "server"]
