@@ -40,31 +40,36 @@ class EmailTriageEnv:
         email_record = self.task.emails[self._index]
         raw_score, feedback, components = grade_action(email_record, action)
 
-        # Clamp each step score strictly into (0.001, 0.999)
-        step_score = max(0.001, min(0.999, raw_score))
+        # The platform sum()s the reward.score to check if it's strictly between 0 and 1.
+        # So each step score must be bounded. We divide by number of emails.
+        # Use 0.98 to avoid ever hitting exactly 1.0.
+        num_emails = len(self.task.emails)
+        normalized_score = (raw_score / num_emails) * 0.98
+        
+        # Ensure we don't accidentally return 0.0 either
+        step_score = max(0.0001, normalized_score)
 
         self._score_sum += step_score
         self._index += 1
         self._done = self._index >= len(self.task.emails)
 
-        # Task score = MEAN of step scores, always in (0.001, 0.999)
-        task_score = self._score_sum / self._index
-
+        # In state/info, we can show scaled up for UI, or keep original sum. 
+        # But reward.score must be exactly what is added to the validator's sum!
         self._history.append({
             "step": self._index - 1,
             "email_id": email_record.id,
             "customer": email_record.customer_tier,
             "sentiment": email_record.sentiment,
             "action": action.model_dump(),
-            "score": round(step_score, 4),
+            "score": round(step_score, 5),
             "feedback": feedback,
             "components": components
         })
 
         obs = None if self._done else self._make_obs()
         reward = Reward(
-            score=round(step_score, 4),
-            cumulative_score=round(task_score, 4),
+            score=round(step_score, 5),
+            cumulative_score=round(self._score_sum, 5),
             feedback=feedback,
             components=components
         )
@@ -75,7 +80,7 @@ class EmailTriageEnv:
             "sentiment": email_record.sentiment,
             "score_feedback": feedback,
             "breakdown": components,
-            "task_score": round(task_score, 4) if self._done else None
+            "task_score": round(self._score_sum, 5) if self._done else None
         }
 
         return obs, reward, self._done, info

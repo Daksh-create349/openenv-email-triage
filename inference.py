@@ -63,7 +63,7 @@ def run_task(task_id: str) -> float:
     print("[START]")
 
     step_id = 0
-    score_sum = 0.0
+    total_score = 0.0
 
     while True:
         email = obs.current_email
@@ -100,18 +100,17 @@ def run_task(task_id: str) -> float:
 
         print(f"[STEP] {step_id} | reward={reward.score}")
 
-        score_sum += reward.score
+        total_score += reward.score
         step_id += 1
 
         if done:
             break
 
-    # Task score = MEAN of step scores → always in (0, 1)
-    task_score = (score_sum / step_id) if step_id > 0 else 0.01
-    # Safety clamp
-    task_score = max(0.01, min(0.99, task_score))
-    print(f"[END] total_score={round(task_score, 4)}")
-    return task_score
+    # The environment already normalizes step_score so the sum is strictly in (0, 1)
+    # Give it one more safety clamp just in case floating point math gets weird.
+    total_score = max(0.01, min(0.99, total_score))
+    print(f"[END] total_score={round(total_score, 4)}")
+    return total_score
 
 
 
