@@ -23,7 +23,7 @@ def grade_action(email: EmailRecord, action: Action) -> tuple[float, str, dict]:
         cat_score -= 0.1
     
     total_score += max(0.0, cat_score)
-    comps["category"] = round(max(0.01, cat_score), 2)
+    comps["category_accuracy"] = round(max(0.01, min(0.99, cat_score / 0.30)), 2) if 0.30 > 0 else 0.0
     fb.append("CAT:OK" if cat == expected_cat else f"CAT:WRONG({cat}/{expected_cat})")
 
     # ── 2. Priority (0.30) ────────────────────────────────────────────────
@@ -46,7 +46,7 @@ def grade_action(email: EmailRecord, action: Action) -> tuple[float, str, dict]:
         fb.append("SENTIMENT:FAIL")
 
     total_score += max(0.0, pri_score)
-    comps["priority"] = round(max(0.01, pri_score), 2)
+    comps["priority_accuracy"] = round(max(0.01, min(0.99, pri_score / 0.30)), 2) if 0.30 > 0 else 0.0
     fb.append("PRI:OK" if pri == expected_pri else f"PRI:MISMATCH({pri})")
 
     # ── 3. Response Quality (0.40) ────────────────────────────────────────
@@ -71,7 +71,7 @@ def grade_action(email: EmailRecord, action: Action) -> tuple[float, str, dict]:
         fb.append("RESP:SHORT")
 
     total_score += round(resp_score, 3)
-    comps["response"] = round(max(0.01, resp_score), 2)
+    comps["response_quality"] = round(max(0.01, min(0.99, resp_score / 0.40)), 2) if 0.40 > 0 else 0.0
     fb.append(f"RESP:KW({hits}/{len(email.expected_response_keywords)})")
 
     final_score = round(max(0.001, min(0.999, total_score)), 4)
