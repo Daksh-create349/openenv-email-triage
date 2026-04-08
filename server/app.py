@@ -13,8 +13,6 @@ env = EmailTriageEnv()
 # This ensures all URLs (/reset, /step, etc.) match the competition standard exactly
 app: FastAPI = create_fastapi_app(
     env=env,
-    action_type=Action,
-    observation_type=Observation,
 )
 
 # 3) Define main() function for the [project.scripts] entrypoint
