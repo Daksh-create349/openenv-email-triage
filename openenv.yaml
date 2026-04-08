@@ -24,7 +24,7 @@ tasks:
       Tests fundamental classification ability.
     difficulty: easy
     num_emails: 10
-    max_score: 10.0
+    max_score: 1.0
 
   - id: medium
     name: Intermediate Email Triage
@@ -33,7 +33,7 @@ tasks:
       Priority judgment is nuanced — some routine-looking emails are actually urgent.
     difficulty: medium
     num_emails: 10
-    max_score: 10.0
+    max_score: 1.0
 
   - id: hard
     name: Advanced Email Triage
@@ -43,7 +43,7 @@ tasks:
       and appropriate escalation. Frontier models typically score below 0.7 here.
     difficulty: hard
     num_emails: 10
-    max_score: 10.0
+    max_score: 1.0
 
 reward:
   type: continuous
