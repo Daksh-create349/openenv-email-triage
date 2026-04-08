@@ -106,6 +106,8 @@ def run_task(task_id: str) -> float:
         if done:
             break
 
+    # Clamp to strictly (0, 1) as required by the validator
+    total_score = max(0.01, min(0.99, total_score))
     print(f"[END] total_score={round(total_score, 4)}")
     return total_score
 
