@@ -30,7 +30,8 @@ class EmailTriageEnv:
 
     def step(self, action: Action) -> tuple[Observation | None, Reward, bool, dict]:
         """
-        Apply action to current email. Returns (obs, reward, done, info).
+        Apply action to current email. Rewards are normalized to ensure the SUM 
+        for the task is strictly in (0, 1) (between 0.01 and 0.99).
         """
         if self._done:
             raise RuntimeError("Episode is done. Call reset() first.")
@@ -38,14 +39,22 @@ class EmailTriageEnv:
         email_record = self.task.emails[self._index]
         score, feedback, components = grade_action(email_record, action)
 
-        self._cumulative_score += score
+        # Normalize score based on task length so SUM stays < 1.0
+        num_emails = len(self.task.emails)
+        # Use 98% of the (0,1) range to stay safely inside bounds
+        normalized_score = (score / num_emails) * 0.98
+        
+        # Add a tiny base reward per step to avoid hitting absolute 0.0
+        step_reward = max(0.0001, normalized_score)
+
+        self._cumulative_score += step_reward
         self._history.append({
             "step": self._index,
             "email_id": email_record.id,
             "customer": email_record.customer_tier,
             "sentiment": email_record.sentiment,
             "action": action.model_dump(),
-            "score": score,
+            "score": round(step_reward, 5),
             "feedback": feedback,
             "components": components
         })
@@ -53,10 +62,14 @@ class EmailTriageEnv:
         self._index += 1
         self._done = self._index >= len(self.task.emails)
 
+        # Final safety clamp on the last step to ensure total is strictly in (0.01, 0.99)
+        if self._done:
+            self._cumulative_score = max(0.01, min(0.99, self._cumulative_score))
+
         obs = None if self._done else self._make_obs()
         reward = Reward(
-            score=score,
-            cumulative_score=round(self._cumulative_score, 4),
+            score=round(step_reward, 5),
+            cumulative_score=round(self._cumulative_score, 5),
             feedback=feedback,
             components=components
         )
@@ -65,10 +78,9 @@ class EmailTriageEnv:
             "email_id": email_record.id,
             "customer_tier": email_record.customer_tier,
             "sentiment": email_record.sentiment,
-            "expected_category": email_record.expected_category,
-            "expected_priority": email_record.expected_priority,
             "score_feedback": feedback,
-            "breakdown": components
+            "breakdown": components,
+            "final_total": round(self._cumulative_score, 5) if self._done else None
         }
 
         return obs, reward, self._done, info
