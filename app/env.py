@@ -18,14 +18,14 @@ class EmailTriageEnv:
         self.task: Task = TASKS[task_id]
         self._index = 0
         self._history: list[dict] = []
-        self._score_sum = 0
+        self._score_sum = 0.005
         self._done = False
 
     def reset(self) -> Observation:
         """Reset environment to initial state."""
         self._index = 0
         self._history = []
-        self._score_sum = 0
+        self._score_sum = 0.005
         self._done = False
         return self._make_obs()
 
@@ -40,8 +40,10 @@ class EmailTriageEnv:
         email_record = self.task.emails[self._index]
         raw_score, feedback, components = grade_action(email_record, action)
 
-        # The platform sum() is now relying on pure raw numbers
-        step_score = int(raw_score)
+        # Distribute a max of 0.94 across emails, with a base of 0.05 total
+        # This ensures the sum stays strictly within (0.05, 0.99)
+        num_emails = len(self.task.emails)
+        step_score = (float(raw_score) * 0.94 / num_emails) + (0.045 / num_emails)
 
         self._score_sum += step_score
         self._index += 1
@@ -62,8 +64,8 @@ class EmailTriageEnv:
 
         obs = None if self._done else self._make_obs()
         reward = Reward(
-            score=step_score,
-            cumulative_score=self._score_sum,
+            score=round(step_score, 5),
+            cumulative_score=round(self._score_sum, 5),
             feedback=feedback,
             components=components
         )
@@ -74,7 +76,7 @@ class EmailTriageEnv:
             "sentiment": email_record.sentiment,
             "score_feedback": feedback,
             "breakdown": components,
-            "task_score": self._score_sum if self._done else None
+            "task_score": round(self._score_sum, 5) if self._done else None
         }
 
         return obs, reward, self._done, info
@@ -87,7 +89,7 @@ class EmailTriageEnv:
             current_index=self._index,
             total_emails=len(self.task.emails),
             history=self._history,
-            cumulative_score=task_score,
+            cumulative_score=round(task_score, 5),
             done=self._done,
             metadata={
                 "task_name": self.task.name,
