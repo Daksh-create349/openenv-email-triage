@@ -7,7 +7,8 @@ class EmailTriageEnv:
     """
     OpenEnv-compliant environment for AI email triage (v2.0 - 100/100 Edition).
     
-    Includes SLA-logic, Sentiment-awareness, and rich debugging info.
+    Each step returns a reward.score in (0, 1).
+    The task's final score = MEAN of all step scores, also in (0, 1).
     """
 
     def __init__(self, task_id: str = "easy"):
@@ -17,59 +18,53 @@ class EmailTriageEnv:
         self.task: Task = TASKS[task_id]
         self._index = 0
         self._history: list[dict] = []
-        self._cumulative_score = 0.0
+        self._score_sum = 0.0
         self._done = False
 
     def reset(self) -> Observation:
         """Reset environment to initial state."""
         self._index = 0
         self._history = []
-        self._cumulative_score = 0.0
+        self._score_sum = 0.0
         self._done = False
         return self._make_obs()
 
     def step(self, action: Action) -> tuple[Observation | None, Reward, bool, dict]:
         """
-        Apply action to current email. Rewards are normalized to ensure the SUM 
-        for the task is strictly in (0, 1) (between 0.01 and 0.99).
+        Apply action to current email.
+        reward.score = per-step quality score, strictly in (0, 1).
         """
         if self._done:
             raise RuntimeError("Episode is done. Call reset() first.")
 
         email_record = self.task.emails[self._index]
-        score, feedback, components = grade_action(email_record, action)
+        raw_score, feedback, components = grade_action(email_record, action)
 
-        # Normalize score based on task length so SUM stays < 1.0
-        num_emails = len(self.task.emails)
-        # Use 98% of the (0,1) range to stay safely inside bounds
-        normalized_score = (score / num_emails) * 0.98
-        
-        # Add a tiny base reward per step to avoid hitting absolute 0.0
-        step_reward = max(0.0001, normalized_score)
+        # Clamp each step score strictly into (0.001, 0.999)
+        step_score = max(0.001, min(0.999, raw_score))
 
-        self._cumulative_score += step_reward
+        self._score_sum += step_score
+        self._index += 1
+        self._done = self._index >= len(self.task.emails)
+
+        # Task score = MEAN of step scores, always in (0.001, 0.999)
+        task_score = self._score_sum / self._index
+
         self._history.append({
-            "step": self._index,
+            "step": self._index - 1,
             "email_id": email_record.id,
             "customer": email_record.customer_tier,
             "sentiment": email_record.sentiment,
             "action": action.model_dump(),
-            "score": round(step_reward, 5),
+            "score": round(step_score, 4),
             "feedback": feedback,
             "components": components
         })
 
-        self._index += 1
-        self._done = self._index >= len(self.task.emails)
-
-        # Final safety clamp on the last step to ensure total is strictly in (0.01, 0.99)
-        if self._done:
-            self._cumulative_score = max(0.01, min(0.99, self._cumulative_score))
-
         obs = None if self._done else self._make_obs()
         reward = Reward(
-            score=round(step_reward, 5),
-            cumulative_score=round(self._cumulative_score, 5),
+            score=round(step_score, 4),
+            cumulative_score=round(task_score, 4),
             feedback=feedback,
             components=components
         )
@@ -80,19 +75,20 @@ class EmailTriageEnv:
             "sentiment": email_record.sentiment,
             "score_feedback": feedback,
             "breakdown": components,
-            "final_total": round(self._cumulative_score, 5) if self._done else None
+            "task_score": round(task_score, 4) if self._done else None
         }
 
         return obs, reward, self._done, info
 
     def state(self) -> State:
         """Return full typed state with metadata."""
+        task_score = (self._score_sum / self._index) if self._index > 0 else 0.0
         return State(
             task_id=self.task_id,
             current_index=self._index,
             total_emails=len(self.task.emails),
             history=self._history,
-            cumulative_score=round(self._cumulative_score, 4),
+            cumulative_score=round(task_score, 4),
             done=self._done,
             metadata={
                 "task_name": self.task.name,
