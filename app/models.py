@@ -53,9 +53,9 @@ class Observation(BaseModel):
 
 class Action(BaseModel):
     """Agent agent response."""
-    category: str    # billing, technical, spam, general
-    priority: str    # low, medium, high, critical
-    response: str    # professional reply
+    category: str = "general"
+    priority: str = "medium"
+    response: str = ""
 
 
 class Reward(BaseModel):
