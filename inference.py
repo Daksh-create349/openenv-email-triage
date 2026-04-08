@@ -11,16 +11,15 @@ try:
 except ImportError:
     pass  # dotenv optional; fall back to shell env
 
-# Robust API Key handling
-api_key = os.getenv("OPENAI_API_KEY")
-if not api_key:
-    # If key is missing, use a placeholder to allow initialization (e.g. for CI/CD checks)
-    # The actual API call will fail later with a clear error message.
-    api_key = "no-key-set"
+# ── API Client Configuration ───────────────────────────────────────────────
+# We use a placeholder if the key is missing to avoid a startup crash.
+# The script will only fail when it actually tries to make a request.
+api_key = os.getenv("OPENAI_API_KEY") or "MISSING_AUTHENTICATION_KEY"
+base_url = os.getenv("API_BASE_URL", "https://api.openai.com/v1")
 
 client = OpenAI(
-    base_url=os.getenv("API_BASE_URL", "https://api.openai.com/v1"),
     api_key=api_key,
+    base_url=base_url,
 )
 MODEL = os.getenv("MODEL_NAME", "gpt-4o-mini")
 
