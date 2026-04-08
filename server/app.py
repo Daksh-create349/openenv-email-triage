@@ -1,92 +1,29 @@
-"""
-FastAPI server exposing the EmailTriageEnv via HTTP.
-Endpoints: POST /reset, POST /step, GET /state, GET /tasks, GET /health
-"""
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from fastapi.responses import RedirectResponse
-from app.env import EmailTriageEnv
-from app.models import Action, Observation, Reward, State
-from app.tasks import TASKS
+import os
+from fastapi import FastAPI
+from openenv_core.env_server import create_fastapi_app
 
-app = FastAPI(
-    title="Email Triage OpenEnv",
-    description="An OpenEnv-compliant environment for AI email triage evaluation.",
-    version="1.0.0",
+# Adjust these imports to match your project
+from app.env import EmailTriageEnv
+from app.models import Action, Observation
+
+# 1) Instantiate your environment
+env = EmailTriageEnv()
+
+# 2) Create FastAPI app using the official OpenEnv helper
+# This ensures all URLs (/reset, /step, etc.) match the competition standard exactly
+app: FastAPI = create_fastapi_app(
+    env=env,
+    action_type=Action,
+    observation_type=Observation,
 )
 
-# One env instance per session (single-user; extend with session IDs if needed)
-_env: EmailTriageEnv | None = None
-
-
-@app.get("/", include_in_schema=False)
-def root():
-    """Redirect to Swagger UI for a better user experience."""
-    return RedirectResponse(url="/docs")
-
-
-class ResetRequest(BaseModel):
-    task_id: str = "easy"
-
-
-class StepResponse(BaseModel):
-    observation: Observation | None
-    reward: Reward
-    done: bool
-    info: dict
-
-
-@app.get("/health")
-def health():
-    return {"status": "ok", "env": "email-triage-v1"}
-
-
-@app.get("/tasks")
-def list_tasks():
-    return {
-        tid: {
-            "name": t.name,
-            "description": t.description,
-            "difficulty": t.difficulty,
-            "num_emails": len(t.emails),
-            "grading_note": t.grading_note,
-        }
-        for tid, t in TASKS.items()
-    }
-
-
-@app.post("/reset", response_model=Observation)
-def reset(req: ResetRequest = ResetRequest()):
-    global _env
-    if req.task_id not in TASKS:
-        raise HTTPException(status_code=400, detail=f"Unknown task_id '{req.task_id}'. Options: {list(TASKS)}")
-    _env = EmailTriageEnv(task_id=req.task_id)
-    return _env.reset()
-
-
-@app.post("/step", response_model=StepResponse)
-def step(action: Action):
-    global _env
-    if _env is None:
-        raise HTTPException(status_code=400, detail="Call /reset first.")
-    if _env._done:
-        raise HTTPException(status_code=400, detail="Episode done. Call /reset to start a new episode.")
-    obs, reward, done, info = _env.step(action)
-    return StepResponse(observation=obs, reward=reward, done=done, info=info)
-
-
-@app.get("/state", response_model=State)
-def get_state():
-    if not _env:
-        raise HTTPException(status_code=400, detail="Environment not initialized. Call /reset first.")
-    return _env.state()
-
-
-def main():
-    """Main entry point for the validator / multi-mode deployment."""
+# 3) Define main() function for the [project.scripts] entrypoint
+def main() -> None:
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=7860)
+    port = int(os.getenv("PORT", "7860"))
+    # Point uvicorn to this file and this app object
+    uvicorn.run("server.app:app", host="0.0.0.0", port=port)
 
-
+# 4) Standard script guard
 if __name__ == "__main__":
     main()
