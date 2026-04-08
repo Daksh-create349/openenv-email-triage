@@ -11,10 +11,10 @@ try:
 except ImportError:
     pass  # dotenv optional; fall back to shell env
 
-# ── API Client Configuration ───────────────────────────────────────────────
-# We use a placeholder if the key is missing to avoid a startup crash.
-# The script will only fail when it actually tries to make a request.
-api_key = os.getenv("OPENAI_API_KEY") or "MISSING_AUTHENTICATION_KEY"
+# ── Proxy-Aware API Client Configuration ─────────────────────────────────────
+# We prioritize "API_KEY" as it's the official variable used by the 
+# OpenEnv competition proxy. We fall back to "OPENAI_API_KEY" for local dev.
+api_key = os.getenv("API_KEY") or os.getenv("OPENAI_API_KEY") or "MISSING_KEY"
 base_url = os.getenv("API_BASE_URL", "https://api.openai.com/v1")
 
 client = OpenAI(
