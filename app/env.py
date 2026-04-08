@@ -18,14 +18,14 @@ class EmailTriageEnv:
         self.task: Task = TASKS[task_id]
         self._index = 0
         self._history: list[dict] = []
-        self._score_sum = 0.05
+        self._score_sum = 0.0
         self._done = False
 
     def reset(self) -> Observation:
         """Reset environment to initial state."""
         self._index = 0
         self._history = []
-        self._score_sum = 0.05
+        self._score_sum = 0.0
         self._done = False
         return self._make_obs()
 
@@ -40,14 +40,8 @@ class EmailTriageEnv:
         email_record = self.task.emails[self._index]
         raw_score, feedback, components = grade_action(email_record, action)
 
-        # The platform sum()s the reward.score to check if it's strictly between 0 and 1.
-        # So each step score must be bounded. We divide by number of emails.
-        # Use 0.85 to avoid ever hitting exactly 1.0 even with rounding.
-        num_emails = len(self.task.emails)
-        normalized_score = (raw_score / num_emails) * 0.85
-        
-        # Ensure we don't accidentally return 0.0 either (min per step 0.01)
-        step_score = max(0.01, normalized_score)
+        # The platform sum() is now relying on pure raw numbers
+        step_score = float(raw_score)
 
         self._score_sum += step_score
         self._index += 1
@@ -87,8 +81,7 @@ class EmailTriageEnv:
 
     def state(self) -> State:
         """Return full typed state with metadata."""
-        # Ensure it is strictly > 0 even at the very start to pass strict validator checks
-        task_score = max(0.05, self._score_sum)
+        task_score = self._score_sum
         return State(
             task_id=self.task_id,
             current_index=self._index,
