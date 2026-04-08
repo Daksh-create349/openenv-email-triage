@@ -11,9 +11,16 @@ try:
 except ImportError:
     pass  # dotenv optional; fall back to shell env
 
+# Robust API Key handling
+api_key = os.getenv("OPENAI_API_KEY")
+if not api_key:
+    # If key is missing, use a placeholder to allow initialization (e.g. for CI/CD checks)
+    # The actual API call will fail later with a clear error message.
+    api_key = "no-key-set"
+
 client = OpenAI(
     base_url=os.getenv("API_BASE_URL", "https://api.openai.com/v1"),
-    api_key=os.getenv("OPENAI_API_KEY"),
+    api_key=api_key,
 )
 MODEL = os.getenv("MODEL_NAME", "gpt-4o-mini")
 
@@ -79,20 +86,17 @@ def run_task(task_id: str) -> float:
                 ],
                 temperature=0.0,
             )
-        except Exception as e:
-            print("ERROR:", e)
-            break
-
-        content = response.choices[0].message.content
-        content = clean_json(content)
-
-        try:
+            content = response.choices[0].message.content
+            content = clean_json(content)
+            
             action_dict = json.loads(content)
+            action = Action(**action_dict)
         except Exception as e:
-            print("JSON ERROR:", e)
+            print(f"ERROR (Step {step_id}): {e}")
+            if "api_key" in str(e).lower() or "401" in str(e):
+                print("CRITICAL: Authentication failed. Check your OPENAI_API_KEY.")
             break
 
-        action = Action(**action_dict)
         obs, reward, done, info = env.step(action)
 
         print(f"[STEP] {step_id} | reward={reward.score}")
