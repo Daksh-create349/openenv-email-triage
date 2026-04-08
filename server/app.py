@@ -59,7 +59,7 @@ def root():
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "environment": "EmailTriageEnv", "version": "1.0.0"}
+    return {"status": "ok", "environment": "EmailTriageEnv", "version": "1.0.5-FIXED"}
 
 
 @app.get("/tasks")
