@@ -5,12 +5,8 @@ from openenv_core.env_server import create_fastapi_app
 from app.env import EmailTriageEnv
 from app.models import Action, Observation
 
-# 1) Instantiate your environment
-env = EmailTriageEnv()
-
-# 2) Create FastAPI app using the official OpenEnv helper
-#    Positional args: env, action_cls, observation_cls
-app: FastAPI = create_fastapi_app(env, Action, Observation)
+# Pass the CLASS, not an instance — openenv-core calls it internally
+app: FastAPI = create_fastapi_app(EmailTriageEnv, Action, Observation)
 
 
 # 3) Define main() for [project.scripts] entrypoint
