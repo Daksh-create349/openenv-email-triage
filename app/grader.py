@@ -74,6 +74,4 @@ def grade_action(email: EmailRecord, action: Action) -> tuple[float, str, dict]:
     comps["response_quality"] = round(max(0.01, min(0.99, resp_score / 0.40)), 2) if 0.40 > 0 else 0.01
     fb.append(f"RESP:KW({hits}/{len(email.expected_response_keywords)})")
 
-    # Clamp to open interval (0, 1) — validator rejects exact 0.0 and 1.0
-    final_score = max(0.01, min(0.99, total_score))
-    return final_score, " | ".join(fb), comps
+    return total_score, " | ".join(fb), comps

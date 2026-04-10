@@ -18,14 +18,14 @@ class EmailTriageEnv:
         self.task: Task = TASKS[task_id]
         self._index = 0
         self._history: list[dict] = []
-        self._score_sum = 0.0
+        self._score_sum = 0.05  # Base offset to avoid 0.0 boundary
         self._done = False
 
     def reset(self) -> Observation:
         """Reset environment to initial state."""
         self._index = 0
         self._history = []
-        self._score_sum = 0.0
+        self._score_sum = 0.05
         self._done = False
         return self._make_obs()
 
@@ -40,10 +40,10 @@ class EmailTriageEnv:
         email_record = self.task.emails[self._index]
         raw_score, feedback, components = grade_action(email_record, action)
 
-        # raw_score is continuous in [0.01, 0.99] from the grader.
-        # Divide by num_emails so task total = sum of step_scores stays in (0, 1).
+        # Scaling logic to keep final sum strictly in (0.05, 0.95)
+        # Base is 0.05. We add up to 0.85 more across all emails.
         num_emails = len(self.task.emails)
-        step_score = float(raw_score) / num_emails
+        step_score = (float(raw_score) * 0.85) / num_emails
 
         self._score_sum += step_score
         self._index += 1
@@ -68,7 +68,8 @@ class EmailTriageEnv:
         )
         
         # Final task_score clamped strictly inside (0, 1)
-        task_score = round(max(0.01, min(0.99, self._score_sum)), 5) if self._done else None
+        # Final task_score check to absolutely guarantee (0, 1) range
+        task_score = round(max(0.05, min(0.95, self._score_sum)), 5) if self._done else None
         info = {
             "email_id": email_record.id,
             "customer_tier": email_record.customer_tier,
@@ -82,7 +83,7 @@ class EmailTriageEnv:
 
     def state(self) -> State:
         """Return full typed state with metadata."""
-        task_score = max(0.01, min(0.99, self._score_sum))
+        task_score = max(0.05, min(0.95, self._score_sum))
         return State(
             task_id=self.task_id,
             current_index=self._index,
