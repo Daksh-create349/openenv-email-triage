@@ -40,10 +40,10 @@ class EmailTriageEnv:
         email_record = self.task.emails[self._index]
         raw_score, feedback, components = grade_action(email_record, action)
 
-        # Distribute a total range of 0.80 across emails, with a 0.10 base.
-        # This guarantees every step_score and the final sum are in (0.01, 0.95).
+        # Integer Scaling: Base 2, Max range 6. All results are pure 'int'.
         num_emails = len(self.task.emails)
-        step_score = (float(raw_score) * 0.80 / num_emails) + (0.10 / num_emails)
+        raw_step = (float(raw_score) * 6.0 / num_emails) + (2.0 / num_emails)
+        step_score = max(1, min(9, int(raw_step * 10))) # Scaling to 1-9 integers
 
         self._score_sum += step_score
         self._index += 1
@@ -54,22 +54,21 @@ class EmailTriageEnv:
             "customer": email_record.customer_tier,
             "sentiment": email_record.sentiment,
             "action": action.model_dump(),
-            "score": round(step_score, 5),
+            "score": step_score,
             "feedback": feedback,
             "components": components
         })
 
         obs = None if self._done else self._make_obs()
         reward = Reward(
-            score=round(step_score, 5),
-            cumulative_score=round(self._score_sum, 5),
+            score=step_score,
+            cumulative_score=int(self._score_sum),
             feedback=feedback,
             components=components
         )
         
-        # Final task_score clamped strictly inside (0, 1)
-        # Final task_score check to absolutely guarantee (0, 1) range
-        task_score = round(max(0.01, min(0.99, self._score_sum)), 5) if self._done else None
+        # Final task_score in safe integer range
+        task_score = int(max(1, min(9, self._score_sum / num_emails))) if self._done else None
         info = {
             "email_id": email_record.id,
             "customer_tier": email_record.customer_tier,
@@ -83,7 +82,7 @@ class EmailTriageEnv:
 
     def state(self) -> State:
         """Return full typed state with metadata."""
-        task_score = max(0.01, min(0.99, self._score_sum))
+        task_score = max(0.1, min(0.9, self._score_sum))
         return State(
             task_id=self.task_id,
             current_index=self._index,

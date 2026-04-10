@@ -56,10 +56,8 @@ reward:
   - description: Keyword coverage of expected response terms
     name: response_quality
     weight: 0.35
-  range:
-  - 0.0
-  - 1.0
-  type: continuous
+  range: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+  type: discrete
 reward_model: app.models:Reward
 state_model: app.models:State
 tags:
@@ -75,14 +73,14 @@ tasks:
     '
   difficulty: easy
   id: easy
-  max_score: 1.0
+  max_score: 0.9
   name: Basic Email Triage
   num_emails: 10
 - description: "10 emails requiring reading comprehension and business context. Priority\
     \ judgment is nuanced \u2014 some routine-looking emails are actually urgent.\n"
   difficulty: medium
   id: medium
-  max_score: 1.0
+  max_score: 0.9
   name: Intermediate Email Triage
   num_emails: 10
 - description: '10 complex, high-stakes, ambiguous emails: legal threats, GDPR requests,
@@ -92,7 +90,7 @@ tasks:
     '
   difficulty: hard
   id: hard
-  max_score: 1.0
+  max_score: 0.9
   name: Advanced Email Triage
   num_emails: 10
 version: 1.0.0

@@ -60,8 +60,8 @@ class Action(BaseModel):
 
 class Reward(BaseModel):
     """Rich feedback signal."""
-    score: float
-    cumulative_score: float = 0.0
+    score: int = 5
+    cumulative_score: int = 5
     feedback: str = ""
     components: Dict[str, float] = {}
 
@@ -72,6 +72,6 @@ class State(BaseModel):
     current_index: int
     total_emails: int
     history: List[Dict[str, Any]]
-    cumulative_score: float
+    cumulative_score: int = 5
     done: bool
     metadata: Dict[str, Any] = {}
