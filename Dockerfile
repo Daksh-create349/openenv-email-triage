@@ -15,5 +15,5 @@ RUN uv lock
 
 EXPOSE 7860
 
-# Point to the new location: server.app:app
+# Point to the location: server.app:app
 CMD ["uvicorn", "server.app:app", "--host", "0.0.0.0", "--port", "7860"]

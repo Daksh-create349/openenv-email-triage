@@ -106,9 +106,8 @@ def run_task(task_id: str) -> float:
         if done:
             break
 
-    # The environment already normalizes step_score so the sum is strictly in (0, 1)
-    # Give it one more safety clamp just in case floating point math gets weird.
-    total_score = max(0.01, min(0.99, total_score))
+    # The env returns step scores already in (0, 1).
+    # total_score here is just for local display.
     print(f"[END] total_score={round(total_score, 4)}")
     return total_score
 
